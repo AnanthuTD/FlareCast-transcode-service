@@ -1,0 +1,64 @@
+services:
+  video-app:
+    build: .
+    image: ananthutd2003/flarecast-video-service
+    container_name: video-app
+    depends_on:
+      video-db:
+        condition: service_healthy
+    env_file:
+      - .env
+    develop:
+      watch:
+        - path: .
+          target: /usr/src/app
+          action: sync
+    ports:
+      - "${PORT}:${PORT}"
+    networks:
+      - video-network
+      - kafka-network
+    command: ["pnpm", "docker:dev"]
+
+  video-db:
+    image: mongo:latest
+    container_name: video-db
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
+    volumes:
+      - video-db-data:/data/db
+    networks:
+      - video-network
+    ports:
+      - ${DB_EXPOSED_PORT}:27017
+    healthcheck:
+      test: echo "try {rs.status()} catch(err) {rs.initiate({_id:'rs0',members:[{_id:0,host:'video-db:27017',priority:1}]})}" | mongosh --port 27017 --quiet
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # video-db-express:
+  #   image: mongo-express
+  #   container_name: video-db-express
+  #   restart: always
+  #   ports:
+  #     - 8081:8081
+  #   environment:
+  #     ME_CONFIG_BASICAUTH: false
+  #     ME_CONFIG_MONGODB_ENABLE_ADMIN: false
+  #     ME_CONFIG_MONGODB_URL: mongodb://video-db:27017?replicaSet=rs0
+  #   depends_on:
+  #     video-db:
+  #       condition: service_healthy
+  #   networks:
+  #     - video-network
+
+volumes:
+  video-db-data:
+
+networks:
+  video-network:
+    driver: bridge
+  kafka-network:
+    name: ${DOCKER_KAFKA_NETWORK}
+    external: true
