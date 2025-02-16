@@ -3,7 +3,7 @@ import env from '../env'
 
 const kafka = new Kafka({
   brokers: [env.KAFKA_BROKER],
-  clientId: 'video-service',
+  clientId: 'transcode-group',
   /* sasl:{
     mechanism: "plain",
     username: env.KAFKA_USERNAME,

@@ -66,15 +66,20 @@ export class VideoProcessingService {
 
 		try {
 			// ✅ Step 3: Process Video Summary (Blocking - If user has access)
-			const result = await processVideo(inputVideo);
+			const result = await processVideo(inputVideo, videoId);
 			if (!result) {
 				sendMessage(
 					TOPICS.VIDEO_SUMMARY_TITLE_EVENT,
 					JSON.stringify({ videoId, status: false, error: "Processing failed" })
 				);
 			} else {
+				if (result.title || result.description)
+					sendMessage(
+						TOPICS.VIDEO_SUMMARY_TITLE_EVENT,
+						JSON.stringify({ videoId, status: true, ...result })
+					);
 				sendMessage(
-					TOPICS.VIDEO_SUMMARY_TITLE_EVENT,
+					TOPICS.VIDEO_TRANSCRIPTION_EVENT,
 					JSON.stringify({ videoId, status: true, ...result })
 				);
 			}

@@ -4,7 +4,7 @@ import { TOPICS } from "./topics";
 import { KafkaMessage } from "kafkajs";
 
 const consumer = kafka.consumer({
-  groupId: "video-service",
+  groupId: "transcode-group",
   allowAutoTopicCreation: true,
 });
 

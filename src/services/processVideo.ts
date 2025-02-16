@@ -1,10 +1,8 @@
-// import prisma from "../../../video/src/prismaClient";
-// import { generateTranscript } from "./flask";
 import { generateTranscript } from "./huggingface";
 import { generateSummaryAndTitle } from "../gemini/generateSummary";
 import { logger } from "../logger/logger";
 
-export const processVideo = async (inputVideo: string) => {
+export const processVideo = async (inputVideo: string, videoId: string) => {
 	try {
 		logger.info("⚙️ Generating video transcriptions...");
 		const transcription = await generateTranscript(inputVideo);
@@ -19,9 +17,14 @@ export const processVideo = async (inputVideo: string) => {
 
 				logger.info("✅ Generated Title and Summary:", result);
 
-				return { title: result.title, description: result.summary };
+				return {
+					title: result.title,
+					description: result.summary,
+					transcription,
+				};
 			} else {
 				logger.error("🔴 Failed to generate title and summary.");
+				return { transcription };
 			}
 		} else {
 			logger.error("🔴 Failed to transcribe audio.");
