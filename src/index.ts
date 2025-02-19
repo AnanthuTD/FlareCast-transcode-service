@@ -23,6 +23,9 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(morgan("dev"));
 app.use(express.static("hls-output"));
+app.use("/", (req, res) => {
+	res.send("pong");
+});
 // app.use(passport.initialize());
 // app.use("/api", passport.authenticate("jwt", { session: false }), router);
 app.use("/metrics", async (req, res) => {
