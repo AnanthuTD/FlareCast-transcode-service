@@ -35,9 +35,6 @@ importers:
       dayjs:
         specifier: ^1.11.13
         version: 1.11.13
-      dotenv:
-        specifier: ^16.4.7
-        version: 16.4.7
       envalid:
         specifier: ^8.0.0
         version: 8.0.0
@@ -59,6 +56,9 @@ importers:
       morgan:
         specifier: ^1.10.0
         version: 1.10.0
+      passport:
+        specifier: ^0.7.0
+        version: 0.7.0
       passport-jwt:
         specifier: ^4.0.1
         version: 4.0.1
@@ -102,9 +102,6 @@ importers:
       nodemon:
         specifier: ^3.1.9
         version: 3.1.9
-      passport:
-        specifier: ^0.7.0
-        version: 0.7.0
       prisma:
         specifier: ^6.1.0
         version: 6.3.1(typescript@5.7.3)
