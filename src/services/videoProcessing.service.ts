@@ -58,7 +58,7 @@ export class VideoProcessingService {
 				.then(() => {
 					sendMessage(
 						TOPICS.THUMBNAIL_EVENT,
-						JSON.stringify({ videoId, status: true })
+						JSON.stringify({ videoId, status: true, duration })
 					);
 				})
 				.catch((error) => {
