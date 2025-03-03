@@ -68,7 +68,7 @@ export class VideoProcessingService {
 						JSON.stringify({
 							videoId,
 							status: false,
-							duration
+							duration,
 							error: (error as Error).message,
 						})
 					);
