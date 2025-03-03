@@ -7,45 +7,27 @@ import { logger } from "../logger/logger";
 import { uploadDirectoryToS3 } from "../aws/uploadToS3";
 import env from "../env";
 
-export const createThumbnails = async (
-	videoPath: string,
-	thumbnailOutputDir: string,
-	gcsPath: string,
-	fileName: string
-) => {
+export const createThumbnails = async ({
+	duration,
+	fileName,
+	gcsPath,
+	thumbnailOutputDir,
+	videoPath,
+}: {
+	videoPath: string;
+	thumbnailOutputDir: string;
+	gcsPath: string;
+	fileName: string;
+	duration: string;
+}) => {
 	try {
-		const videoDuration = await fixWebMDuration(
-			videoPath,
-			path.join(process.cwd(), `remuxed_video`, `${randomUUID()}.webm`)
-		);
-
-		if (!videoDuration) {
+		if (!duration) {
 			logger.info(
 				"🔴 Unable to fix video duration. Skipping thumbnail generation."
 			);
 			return;
 		}
-
-		/* prisma.video
-			.update({
-				where: {
-					id: fileName,
-				},
-				data: {
-					duration: videoDuration,
-				},
-			})
-			.then(() => {
-				console.log("Updated video duration in DB: ", videoDuration);
-			})
-			.catch((err) =>
-				console.error(
-					`Failed to update video duration in db (${videoDuration})`,
-					err
-				)
-			); */
-
-		const videoDurationNum = parseFloat(videoDuration);
+		const videoDurationNum = parseFloat(duration);
 
 		if (!fs.existsSync(thumbnailOutputDir)) {
 			fs.mkdirSync(thumbnailOutputDir, { recursive: true });
@@ -56,7 +38,7 @@ export const createThumbnails = async (
 			(_, i) => `${i * 10}`
 		);
 
-		logger.info("====timemarks===", timemarks, videoDuration);
+		logger.info("====timemarks===", timemarks, duration);
 
 		ffmpeg(videoPath)
 			.on("filenames", function (filenames) {

@@ -5,6 +5,8 @@ import { processVideo } from "./processVideo";
 import { sendMessage } from "../kafka/producer";
 import { TOPICS } from "../kafka/topics";
 import { unlink } from "fs/promises";
+import { fixWebMDuration } from "./fixDuration";
+import { randomUUID } from "crypto";
 
 export class VideoProcessingService {
 	static async processVideoFile(
@@ -40,29 +42,38 @@ export class VideoProcessingService {
 		}
 
 		// ✅ Step 2: Process Thumbnails (Fire-and-Forget)
-		createThumbnails(
+		const duration = await fixWebMDuration(
 			inputVideo,
-			path.join(outputDirectory, "thumbnails"),
-			gcsPath,
-			videoId
-		)
-			.then(() => {
-				sendMessage(
-					TOPICS.THUMBNAIL_EVENT,
-					JSON.stringify({ videoId, status: true })
-				);
+			path.join(process.cwd(), `remuxed_video`, `${randomUUID()}.webm`)
+		);
+
+		if (duration) {
+			createThumbnails({
+				videoPath: inputVideo,
+				thumbnailOutputDir: path.join(outputDirectory, "thumbnails"),
+				gcsPath,
+				fileName: videoId,
+				duration,
 			})
-			.catch((error) => {
-				console.error(`Thumbnail generation failed for ${videoId}:`, error);
-				sendMessage(
-					TOPICS.THUMBNAIL_EVENT,
-					JSON.stringify({
-						videoId,
-						status: false,
-						error: (error as Error).message,
-					})
-				);
-			});
+				.then(() => {
+					sendMessage(
+						TOPICS.THUMBNAIL_EVENT,
+						JSON.stringify({ videoId, status: true })
+					);
+				})
+				.catch((error) => {
+					console.error(`Thumbnail generation failed for ${videoId}:`, error);
+					sendMessage(
+						TOPICS.THUMBNAIL_EVENT,
+						JSON.stringify({
+							videoId,
+							status: false,
+							duration
+							error: (error as Error).message,
+						})
+					);
+				});
+		}
 
 		try {
 			// ✅ Step 3: Process Video Summary (Blocking - If user has access)
