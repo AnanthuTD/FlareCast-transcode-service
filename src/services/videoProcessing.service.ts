@@ -7,6 +7,28 @@ import { TOPICS } from "../kafka/topics";
 import { unlink } from "fs/promises";
 import { fixWebMDuration } from "./fixDuration";
 import { randomUUID } from "crypto";
+import ffmpeg from "fluent-ffmpeg";
+
+// Set FFmpeg path for fluent-ffmpeg
+ffmpeg.setFfmpegPath(process.env.FFMPEG_LOCATION || "ffmpeg");
+
+// Function to get video duration in seconds using fluent-ffmpeg
+async function getVideoDuration(filePath: string): Promise<number> {
+	return new Promise((resolve, reject) => {
+		ffmpeg.ffprobe(filePath, (err, metadata) => {
+			if (err) {
+				reject(new Error(`ffprobe error: ${err.message}`));
+			} else {
+				const duration = metadata.format.duration; // Duration in seconds
+				if (typeof duration === "number") {
+					resolve(duration);
+				} else {
+					reject(new Error("Duration not found in metadata"));
+				}
+			}
+		});
+	});
+}
 
 export class VideoProcessingService {
 	static async processVideoFile({
@@ -15,20 +37,21 @@ export class VideoProcessingService {
 		filePath,
 		aiFeature = true,
 		transcode = true,
+		type = "VOD",
 	}: {
 		fileName: string;
 		videoId: string;
 		filePath: string;
 		aiFeature?: boolean;
 		transcode?: boolean;
+		type: "LIVE" | "VOD";
 	}) {
 		const inputVideo = filePath;
 		const outputDirectory = path.join(process.cwd(), `hls-output/${videoId}`);
 		const gcsPath = videoId;
 
-		if (transcode)
+		if (transcode) {
 			try {
-				// Step 1: Process HLS (Blocking - Must Succeed)
 				sendMessage(
 					TOPICS.VIDEO_TRANSCODE_EVENT,
 					JSON.stringify({ videoId, status: "" }) // Notify start
@@ -39,7 +62,7 @@ export class VideoProcessingService {
 					JSON.stringify({ videoId, status: "SUCCESS" })
 				);
 			} catch (error) {
-				console.error(`HLS  FAILED for ${videoId}:`, error);
+				console.error(`HLS FAILED for ${videoId}:`, error);
 				sendMessage(
 					TOPICS.VIDEO_TRANSCODE_EVENT,
 					JSON.stringify({
@@ -49,14 +72,31 @@ export class VideoProcessingService {
 					})
 				);
 				removeFile(inputVideo);
-				return; // Stop if HLS fails
+				return;
 			}
+		}
 
-		// Step 2: Process Thumbnails (Fire-and-Forget)
-		const duration = await fixWebMDuration(
-			inputVideo,
-			path.join(process.cwd(), `remuxed_video`, `${randomUUID()}.webm`)
-		);
+		// Step 2: Get Video Duration and Process Thumbnails
+		let duration: string | undefined;
+
+		try {
+			if (type === "LIVE") {
+				// For live streams, fix WebM duration if needed
+				const remuxedPath = path.join(
+					process.cwd(),
+					`remuxed_video`,
+					`${randomUUID()}.webm`
+				);
+				duration = await fixWebMDuration(inputVideo, remuxedPath);
+			} else {
+				// For VOD, get duration directly with fluent-ffmpeg
+				const durationSeconds = await getVideoDuration(inputVideo);
+				duration = durationSeconds.toString(); // Convert to string for consistency
+			}
+		} catch (error) {
+			console.error(`Failed to get duration for ${videoId}:`, error);
+			duration = "0"; // Fallback to 0 if duration extraction fails
+		}
 
 		if (duration) {
 			sendMessage(
@@ -92,7 +132,6 @@ export class VideoProcessingService {
 
 		if (aiFeature) {
 			try {
-				// Step 3: Process Video Summary (Blocking - If user has access)
 				sendMessage(
 					TOPICS.VIDEO_SUMMARY_TITLE_EVENT,
 					JSON.stringify({ videoId, status: "PROCESSING" })
@@ -132,7 +171,6 @@ export class VideoProcessingService {
 			}
 		}
 
-		// Step 4: Send Video Processed Event (Fire-and-Forget)
 		sendMessage(
 			TOPICS.VIDEO_PROCESSED_EVENT,
 			JSON.stringify({ videoId, status: "SUCCESS" })

@@ -7,9 +7,9 @@ import { VideoProcessingService } from "../../services/videoProcessing.service";
 export async function handleNewVideoEvent(value: {
 	s3Key: string;
 	videoId: string;
-	userId: string;
 	aiFeature: boolean;
 	transcode: boolean;
+	type: "LIVE" | "VOD";
 }) {
 	logger.info("New video received for transcoding.", value);
 
@@ -30,5 +30,6 @@ export async function handleNewVideoEvent(value: {
 		filePath,
 		aiFeature: value.aiFeature,
 		transcode: value.transcode,
+		type: value.type,
 	});
 }
