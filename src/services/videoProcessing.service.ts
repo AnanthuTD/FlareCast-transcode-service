@@ -54,7 +54,7 @@ export class VideoProcessingService {
 			try {
 				sendMessage(
 					TOPICS.VIDEO_TRANSCODE_EVENT,
-					JSON.stringify({ videoId, status: "" }) // Notify start
+					JSON.stringify({ videoId, status: "PROCESSING" }) // Notify start
 				);
 				await createHLSAndUpload(inputVideo, outputDirectory, gcsPath);
 				sendMessage(
@@ -101,7 +101,7 @@ export class VideoProcessingService {
 		if (duration) {
 			sendMessage(
 				TOPICS.THUMBNAIL_EVENT,
-				JSON.stringify({ videoId, status: "", duration }) // Notify start
+				JSON.stringify({ videoId, status: "PROCESSING", duration }) // Notify start
 			);
 			createThumbnails({
 				videoPath: inputVideo,
