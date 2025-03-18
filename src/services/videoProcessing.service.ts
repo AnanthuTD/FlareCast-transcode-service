@@ -71,7 +71,7 @@ export class VideoProcessingService {
 						error: (error as Error).message,
 					})
 				);
-				removeFile(inputVideo);
+				// removeFile(inputVideo);
 				return;
 			}
 		}
@@ -80,7 +80,7 @@ export class VideoProcessingService {
 		let duration: string | undefined;
 
 		try {
-			if (type === "LIVE") {
+			if (type !== "LIVE") {
 				// For live streams, fix WebM duration if needed
 				const remuxedPath = path.join(
 					process.cwd(),
@@ -95,7 +95,6 @@ export class VideoProcessingService {
 			}
 		} catch (error) {
 			console.error(`Failed to get duration for ${videoId}:`, error);
-			duration = "0"; // Fallback to 0 if duration extraction fails
 		}
 
 		if (duration) {
@@ -176,7 +175,7 @@ export class VideoProcessingService {
 			JSON.stringify({ videoId, status: "SUCCESS" })
 		);
 
-		removeFile(inputVideo);
+		// removeFile(inputVideo);
 	}
 }
 
