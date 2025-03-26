@@ -8,6 +8,7 @@ import { unlink } from "fs/promises";
 import { fixWebMDuration } from "./fixDuration";
 import { randomUUID } from "crypto";
 import ffmpeg from "fluent-ffmpeg";
+import { logger } from "../logger/logger";
 
 // Set FFmpeg path for fluent-ffmpeg
 ffmpeg.setFfmpegPath(process.env.FFMPEG_LOCATION || "ffmpeg");
@@ -46,12 +47,16 @@ export class VideoProcessingService {
 		transcode?: boolean;
 		type: "LIVE" | "VOD";
 	}) {
+		logger.info("============ started video processing =================")
+
 		const inputVideo = filePath;
 		const outputDirectory = path.join(process.cwd(), `hls-output/${videoId}`);
 		const gcsPath = videoId;
 
 		if (transcode) {
 			try {
+				logger.info("============ started transcoding =================")
+
 				sendMessage(
 					TOPICS.VIDEO_TRANSCODE_EVENT,
 					JSON.stringify({ videoId, status: "PROCESSING" }) // Notify start
