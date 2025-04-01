@@ -2,8 +2,6 @@ import { HeadObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import fs from "fs";
 import { pipeline } from "stream";
 import { promisify } from "util";
-
-// Import or create your S3 client instance
 import s3Client from "./s3";
 import path from "path";
 import { ensureDirectoryExists } from "../helpers/fs.helper";
@@ -39,39 +37,43 @@ export async function downloadInParts(
 
 		// Step 2: Download parts concurrently
 		const downloadPromises: Promise<string>[] = [];
+		const partsDir = path.join(path.dirname(outputFilePath), "parts");
 		for (let i = 0; i < partCount; i++) {
 			const start = i * partSize;
 			const end = Math.min(start + partSize - 1, totalSize - 1);
 			downloadPromises.push(
-				downloadPart(
-					bucketName,
-					objectKey,
-					start,
-					end,
-					i,
-					path.join(path.dirname(outputFilePath), "parts")
-				)
+				downloadPart(bucketName, objectKey, start, end, i, partsDir)
 			);
 		}
 
 		const parts: string[] = await Promise.all(downloadPromises);
 
 		// Step 3: Merge all parts into a single file
-		// const outputFilePath = path.join(destinationDir, objectKey);
+		const writeStream = fs.createWriteStream(outputFilePath, { flags: "w" });
 
-		const writeStream = fs.createWriteStream(outputFilePath);
-
+		// Use a single pipeline to concatenate all parts
 		for (const partPath of parts) {
 			const readStream = fs.createReadStream(partPath);
-			await pipe(readStream, writeStream);
-			fs.unlinkSync(partPath); // Delete temporary part file
+			await new Promise<void>((resolve, reject) => {
+				readStream.pipe(writeStream, { end: false }); // Don't close writeStream yet
+				readStream.on("end", () => resolve());
+				readStream.on("error", (err) => reject(err));
+			});
+			fs.unlinkSync(partPath); // Delete temporary part file after piping
 		}
 
-		console.log(`Download complete: ${outputFilePath}`);
+		// Close the writeStream after all parts are written
+		await new Promise<void>((resolve, reject) => {
+			writeStream.on("finish", resolve);
+			writeStream.on("error", reject);
+			writeStream.end();
+		});
 
+		console.log(`Download complete: ${outputFilePath}`);
 		return outputFilePath;
 	} catch (error) {
 		console.error("Error downloading file:", error);
+		throw error; // Re-throw to handle upstream
 	}
 }
 
@@ -98,11 +100,9 @@ async function downloadPart(
 		throw new Error(`Failed to download part ${partIndex + 1}`);
 	}
 
-	const outputFilePath = path.join(destinationDir, `part-${partIndex}`);
+	const partPath = path.join(destinationDir, `part-${partIndex}`);
+	await ensureDirectoryExists(partPath);
 
-	await ensureDirectoryExists(outputFilePath);
-
-	const partPath = path.join(outputFilePath);
 	const writeStream = fs.createWriteStream(partPath);
 	await pipe(response.Body as NodeJS.ReadableStream, writeStream);
 

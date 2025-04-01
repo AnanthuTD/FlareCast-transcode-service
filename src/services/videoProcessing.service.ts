@@ -85,7 +85,7 @@ export class VideoProcessingService {
 		let duration: string | undefined;
 
 		try {
-			if (type !== "LIVE") {
+			if (type !== "LIVE" && filePath.split(".").at(-1) === "webm") {
 				// For live streams, fix WebM duration if needed
 				const remuxedPath = path.join(
 					process.cwd(),
