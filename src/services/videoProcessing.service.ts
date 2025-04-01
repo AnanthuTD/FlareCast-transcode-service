@@ -47,7 +47,7 @@ export class VideoProcessingService {
 		transcode?: boolean;
 		type: "LIVE" | "VOD";
 	}) {
-		logger.info("============ started video processing =================")
+		logger.info("============ started video processing =================");
 
 		const inputVideo = filePath;
 		const outputDirectory = path.join(process.cwd(), `hls-output/${videoId}`);
@@ -55,7 +55,7 @@ export class VideoProcessingService {
 
 		if (transcode) {
 			try {
-				logger.info("============ started transcoding =================")
+				logger.info("============ started transcoding =================");
 
 				sendMessage(
 					TOPICS.VIDEO_TRANSCODE_EVENT,
@@ -101,6 +101,8 @@ export class VideoProcessingService {
 		} catch (error) {
 			console.error(`Failed to get duration for ${videoId}:`, error);
 		}
+
+		logger.debug("Duration: " + duration);
 
 		if (duration) {
 			sendMessage(
