@@ -3,7 +3,7 @@ import env from "../env";
 import { logger } from "../logger/logger";
 import path from "path";
 import { promisify } from "util";
-import { extractAndConvertAudio } from "./extractAndConvertAudio"; // Import the function
+import { extractAndConvertAudio } from "./convertToAudio";
 
 const unlinkAsync = promisify(fs.unlink);
 
