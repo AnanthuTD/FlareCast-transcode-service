@@ -1,13 +1,10 @@
 import ffmpeg from "fluent-ffmpeg";
 import fs from "fs";
 import path from "path";
-import { logger } from "../logger/logger"; // Reuse the logger from generateTranscript
+import { logger } from "../logger/logger";
 
-// Ensure FFmpeg is configured
-const ffmpegPath = require("ffmpeg-static");
-ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfmpegPath(process.env.FFMPEG_LOCATION || "ffmpeg");
 
-// Function to ensure the output directory exists
 function ensureDirectoryExists(dir) {
 	if (!fs.existsSync(dir)) {
 		fs.mkdirSync(dir, { recursive: true });
@@ -24,7 +21,6 @@ export async function extractAndConvertAudio({
 	outputDir: string;
 	fileName: string;
 }): Promise<string> {
-	// Validate inputs
 	if (!fs.existsSync(inputFile)) {
 		throw new Error(`Input file does not exist: ${inputFile}`);
 	}
@@ -37,15 +33,15 @@ export async function extractAndConvertAudio({
 
 	return new Promise((resolve, reject) => {
 		ffmpeg(inputFile)
-			.noVideo() // Remove video, keep only audio
-			.audioFrequency(16000) // 16 kHz for Whisper
-			.audioChannels(1) // Mono
-			.audioCodec("pcm_s16le") // PCM 16-bit for WAV
+			.noVideo() 
+			.audioFrequency(16000) 
+			.audioChannels(1) 
+			.audioCodec("pcm_s16le") 
 			.audioFilters([
-				"loudnorm", // Normalize volume
-				"silenceremove=start_periods=1:start_threshold=-50dB:start_silence=1", // Trim silence
+				"loudnorm",
+				"silenceremove=start_periods=1:start_threshold=-50dB:start_silence=1",
 			])
-			.outputOptions("-map_metadata -1") // Strip metadata to avoid UTF-8 issues
+			.outputOptions("-map_metadata -1") 
 			.output(outputFile)
 			.on("end", () => {
 				logger.info(`Audio extraction & conversion finished: ${outputFile}`);
